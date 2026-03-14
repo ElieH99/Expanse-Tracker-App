@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ConvexClientProvider } from "./ConvexClientProvider";
-import { ToastProvider } from "@/components/ui/toast";
+import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,7 +17,8 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <ConvexClientProvider>
-          <ToastProvider>{children}</ToastProvider>
+          {children}
+          <Toaster richColors position="bottom-right" duration={3000} />
         </ConvexClientProvider>
       </body>
     </html>

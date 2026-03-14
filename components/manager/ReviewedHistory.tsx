@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { StatusBadge } from "@/components/expenses/StatusBadge";
 import { ReviewModal } from "./ReviewModal";
 import { Input } from "@/components/ui/input";
+import { AmountRangeSlider } from "@/components/ui/amount-range-slider";
 import {
   Select,
   SelectContent,
@@ -46,6 +47,9 @@ export function ReviewedHistory() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [nameSearch, setNameSearch] = useState("");
+  const [amountRange, setAmountRange] = useState<[number, number] | null>(null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [sorting, setSorting] = useState<SortingState>([
     { id: "decidedOn", desc: true },
   ]);
@@ -59,6 +63,14 @@ export function ReviewedHistory() {
     }
   );
 
+  const amountBounds = useMemo(() => {
+    if (!reviewed || reviewed.length === 0) return { min: 0, max: 5000 };
+    const amounts = reviewed.map((e: { amount: number }) => e.amount ?? 0);
+    return { min: 0, max: Math.ceil(Math.max(...amounts) / 100) * 100 || 5000 };
+  }, [reviewed]);
+
+  const sliderValue: [number, number] = amountRange ?? [amountBounds.min, amountBounds.max];
+
   const categoryMap = useMemo(() => {
     if (!categories) return {};
     const map: Record<string, string> = {};
@@ -70,11 +82,23 @@ export function ReviewedHistory() {
 
   const filteredData = useMemo(() => {
     if (!reviewed) return [];
-    if (!nameSearch) return reviewed;
-    return reviewed.filter((r: { submitterName: string }) =>
-      r.submitterName.toLowerCase().includes(nameSearch.toLowerCase())
-    );
-  }, [reviewed, nameSearch]);
+    return reviewed.filter((r: { submitterName: string; amount: number; approvedAt?: number; rejectedAt?: number; closedAt?: number; updatedAt: number }) => {
+      if (nameSearch && !r.submitterName.toLowerCase().includes(nameSearch.toLowerCase())) return false;
+      if (amountRange) {
+        if (r.amount < amountRange[0] || r.amount > amountRange[1]) return false;
+      }
+      const decidedAt = r.approvedAt ?? r.rejectedAt ?? r.closedAt ?? r.updatedAt;
+      if (dateFrom) {
+        const from = new Date(dateFrom).getTime();
+        if (decidedAt < from) return false;
+      }
+      if (dateTo) {
+        const to = new Date(dateTo).getTime() + 86400000 - 1;
+        if (decidedAt > to) return false;
+      }
+      return true;
+    });
+  }, [reviewed, nameSearch, amountRange, dateFrom, dateTo]);
 
   const columns = useMemo<ColumnDef<HistoryRow>[]>(
     () => [
@@ -150,13 +174,16 @@ export function ReviewedHistory() {
   return (
     <>
       {/* Filter bar */}
-      <div className="flex flex-wrap gap-3 mt-4 mb-4">
+      <div className="flex flex-wrap items-center gap-3 mt-4 mb-4">
+        {/* Name search */}
         <Input
           placeholder="Search by employee name..."
           value={nameSearch}
           onChange={(e) => setNameSearch(e.target.value)}
-          className="w-64"
+          className="w-56"
         />
+
+        {/* Status */}
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Status" />
@@ -168,8 +195,10 @@ export function ReviewedHistory() {
             <SelectItem value="Closed">Closed</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Category */}
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-44">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
@@ -181,6 +210,34 @@ export function ReviewedHistory() {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Amount range slider */}
+        <AmountRangeSlider
+          min={amountBounds.min}
+          max={amountBounds.max}
+          value={sliderValue}
+          onValueChange={(v) => setAmountRange(v)}
+          onReset={() => setAmountRange(null)}
+        />
+
+        {/* Date range */}
+        <div className="flex items-center gap-1 rounded-md border border-input bg-background px-3 h-10">
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="text-sm bg-transparent outline-none w-[130px] text-foreground"
+            aria-label="Date from"
+          />
+          <span className="text-muted-foreground text-sm px-0.5">–</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="text-sm bg-transparent outline-none w-[130px] text-foreground"
+            aria-label="Date to"
+          />
+        </div>
       </div>
 
       <div className="rounded-md border bg-white overflow-x-auto">

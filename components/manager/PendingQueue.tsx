@@ -16,6 +16,7 @@ import { type ExpenseStatus } from "@/lib/constants";
 import { format } from "date-fns";
 import { StatusBadge } from "@/components/expenses/StatusBadge";
 import { ReviewModal } from "./ReviewModal";
+import { AmountRangeSlider } from "@/components/ui/amount-range-slider";
 
 interface PendingRow {
   _id: Id<"expenses">;
@@ -36,6 +37,18 @@ export function PendingQueue() {
   ]);
   const [reviewIndex, setReviewIndex] = useState<number | null>(null);
 
+  const [amountRange, setAmountRange] = useState<[number, number] | null>(null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  const amountBounds = useMemo(() => {
+    if (!pending || pending.length === 0) return { min: 0, max: 5000 };
+    const amounts = pending.map((e) => e.amount ?? 0);
+    return { min: 0, max: Math.ceil(Math.max(...amounts) / 100) * 100 || 5000 };
+  }, [pending]);
+
+  const sliderValue: [number, number] = amountRange ?? [amountBounds.min, amountBounds.max];
+
   const categoryMap = useMemo(() => {
     if (!categories) return {};
     const map: Record<string, string> = {};
@@ -44,6 +57,24 @@ export function PendingQueue() {
     });
     return map;
   }, [categories]);
+
+  const filteredData = useMemo(() => {
+    if (!pending) return [];
+    return pending.filter((e) => {
+      if (amountRange) {
+        if (e.amount < amountRange[0] || e.amount > amountRange[1]) return false;
+      }
+      if (dateFrom) {
+        const from = new Date(dateFrom).getTime();
+        if (e.submittedAt < from) return false;
+      }
+      if (dateTo) {
+        const to = new Date(dateTo).getTime() + 86400000 - 1;
+        if (e.submittedAt > to) return false;
+      }
+      return true;
+    });
+  }, [pending, amountRange, dateFrom, dateTo]);
 
   const columns = useMemo<ColumnDef<PendingRow>[]>(
     () => [
@@ -88,7 +119,7 @@ export function PendingQueue() {
   );
 
   const table = useReactTable({
-    data: pending ?? [],
+    data: filteredData as PendingRow[],
     columns,
     state: { sorting },
     onSortingChange: setSorting,
@@ -126,7 +157,38 @@ export function PendingQueue() {
 
   return (
     <>
-      <div className="rounded-md border bg-white mt-4 overflow-x-auto">
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-3 mt-4 mb-4">
+        {/* Amount range slider */}
+        <AmountRangeSlider
+          min={amountBounds.min}
+          max={amountBounds.max}
+          value={sliderValue}
+          onValueChange={(v) => setAmountRange(v)}
+          onReset={() => setAmountRange(null)}
+        />
+
+        {/* Date range */}
+        <div className="flex items-center gap-1 rounded-md border border-input bg-background px-3 h-10">
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="text-sm bg-transparent outline-none w-[130px] text-foreground"
+            aria-label="Date from"
+          />
+          <span className="text-muted-foreground text-sm px-0.5">–</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="text-sm bg-transparent outline-none w-[130px] text-foreground"
+            aria-label="Date to"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-md border bg-white mt-0 overflow-x-auto">
         <table className="w-full" aria-label="Pending expenses for review">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -148,21 +210,29 @@ export function PendingQueue() {
             ))}
           </thead>
           <tbody>
-            {sortedRows.map((row, idx) => (
-              <tr
-                key={row.id}
-                className={`border-b hover:bg-muted/30 cursor-pointer transition-colors ${
-                  row.original.status === "UnderReview" ? "bg-amber-50/50" : ""
-                }`}
-                onClick={() => setReviewIndex(idx)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-3 text-sm">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
+            {sortedRows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-12 text-center text-muted-foreground">
+                  No expenses match the current filters.
+                </td>
               </tr>
-            ))}
+            ) : (
+              sortedRows.map((row, idx) => (
+                <tr
+                  key={row.id}
+                  className={`border-b hover:bg-muted/30 cursor-pointer transition-colors ${
+                    row.original.status === "UnderReview" ? "bg-amber-50/50" : ""
+                  }`}
+                  onClick={() => setReviewIndex(idx)}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className="px-4 py-3 text-sm">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

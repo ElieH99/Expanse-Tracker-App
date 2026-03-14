@@ -51,6 +51,11 @@
   --radius: 0.5rem;
 }
 
+/* Ensure Sonner toasts appear above dialogs/modals */
+[data-sonner-toaster] {
+  z-index: 9999 !important;
+}
+
 @layer base {
   * {
     @apply border-border;

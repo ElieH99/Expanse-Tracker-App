@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
 import { type ExpenseStatus, REJECTION_REASONS, CLOSE_REASONS } from "@/lib/constants";
 import { format } from "date-fns";
-import { useToast } from "@/components/ui/toast";
+import { toast } from "@/components/ui/toast";
 import { StatusBadge } from "@/components/expenses/StatusBadge";
 import { VersionBadge } from "@/components/expenses/VersionBadge";
 import { RejectionBanner } from "@/components/expenses/RejectionBanner";
@@ -61,7 +61,7 @@ export function ReviewModal({
   onNavigate,
   readOnly = false,
 }: ReviewModalProps) {
-  const { toast } = useToast();
+
   const detail = useQuery(
     api.expenses.getExpenseDetail,
     expenseId ? { expenseId } : "skip"
@@ -122,14 +122,10 @@ export function ReviewModal({
         expenseId,
         approvalNote: approvalNote || undefined,
       });
-      toast({ title: "Expense approved" });
+      toast.success("Expense approved");
       onClose();
     } catch (err) {
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to approve",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: err instanceof Error ? err.message : "Failed to approve", duration: 5000 });
     } finally {
       setActionLoading(false);
     }
@@ -144,14 +140,10 @@ export function ReviewModal({
         rejectionReason,
         rejectionComment,
       });
-      toast({ title: "Expense rejected" });
+      toast.success("Expense rejected");
       onClose();
     } catch (err) {
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to reject",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: err instanceof Error ? err.message : "Failed to reject", duration: 5000 });
     } finally {
       setActionLoading(false);
     }
@@ -166,15 +158,11 @@ export function ReviewModal({
         closeReason,
         closeComment,
       });
-      toast({ title: "Expense permanently closed" });
+      toast.success("Expense permanently closed");
       setCloseConfirmOpen(false);
       onClose();
     } catch (err) {
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to close",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: err instanceof Error ? err.message : "Failed to close", duration: 5000 });
     } finally {
       setActionLoading(false);
     }

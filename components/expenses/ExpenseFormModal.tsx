@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
 import { expenseFormSchema, type ExpenseFormValues } from "@/lib/validators";
 import { CURRENCIES, ACCEPTED_RECEIPT_TYPES, MAX_RECEIPT_SIZE_BYTES } from "@/lib/constants";
-import { useToast } from "@/components/ui/toast";
+import { toast } from "@/components/ui/toast";
 import { RejectionBanner } from "./RejectionBanner";
 import {
   Dialog,
@@ -52,7 +52,7 @@ export function ExpenseFormModal({
   rejectionReason,
   rejectionComment,
 }: ExpenseFormModalProps) {
-  const { toast } = useToast();
+
   const categories = useQuery(api.categories.listCategories);
   const createDraft = useMutation(api.expenses.createDraft);
   const saveDraft = useMutation(api.expenses.saveDraft);
@@ -125,11 +125,11 @@ export function ExpenseFormModal({
     if (!file) return;
 
     if (!ACCEPTED_RECEIPT_TYPES.includes(file.type as typeof ACCEPTED_RECEIPT_TYPES[number])) {
-      toast({ title: "Invalid file type", description: "Only JPEG, PNG, and WEBP files are accepted", variant: "destructive" });
+      toast.error("Invalid file type", { description: "Only JPEG, PNG, and WEBP files are accepted", duration: 5000 });
       return;
     }
     if (file.size > MAX_RECEIPT_SIZE_BYTES) {
-      toast({ title: "File too large", description: "File must be under 5 MB", variant: "destructive" });
+      toast.error("File too large", { description: "File must be under 5 MB", duration: 5000 });
       return;
     }
 
@@ -145,7 +145,7 @@ export function ExpenseFormModal({
       setValue("receiptStorageId", storageId, { shouldDirty: true });
       setReceiptPreview(URL.createObjectURL(file));
     } catch {
-      toast({ title: "Upload failed", description: "Failed to upload receipt. Please try again.", variant: "destructive" });
+      toast.error("Upload failed", { description: "Failed to upload receipt. Please try again.", duration: 5000 });
     } finally {
       setUploading(false);
     }
@@ -165,7 +165,7 @@ export function ExpenseFormModal({
           notes: data.notes,
           receiptStorageId: data.receiptStorageId,
         });
-        toast({ title: "Draft saved" });
+        toast.success("Draft saved");
       } else if (expenseId) {
         await saveDraft({
           expenseId,
@@ -178,11 +178,11 @@ export function ExpenseFormModal({
           notes: data.notes,
           receiptStorageId: data.receiptStorageId,
         });
-        toast({ title: "Draft updated" });
+        toast.success("Draft updated");
       }
       onClose();
     } catch (err) {
-      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to save draft", variant: "destructive" });
+      toast.error("Error", { description: err instanceof Error ? err.message : "Failed to save draft", duration: 5000 });
     } finally {
       setSaving(false);
     }
@@ -190,7 +190,7 @@ export function ExpenseFormModal({
 
   const handleSubmitForApproval = async (data: ExpenseFormValues) => {
     if (!data.receiptStorageId) {
-      toast({ title: "Receipt required", description: "Please upload a receipt before submitting", variant: "destructive" });
+      toast.error("Receipt required", { description: "Please upload a receipt before submitting", duration: 5000 });
       return;
     }
 
@@ -208,7 +208,7 @@ export function ExpenseFormModal({
           receiptStorageId: data.receiptStorageId,
         });
         await submitExpense({ expenseId: newId });
-        toast({ title: "Expense submitted for approval" });
+        toast.success("Expense submitted for approval");
       } else if (expenseId) {
         await saveDraft({
           expenseId,
@@ -226,19 +226,32 @@ export function ExpenseFormModal({
         } else {
           await submitExpense({ expenseId });
         }
-        toast({ title: "Expense submitted for approval" });
+        toast.success("Expense submitted for approval");
       }
       onClose();
     } catch (err) {
-      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to submit expense", variant: "destructive" });
+      toast.error("Error", { description: err instanceof Error ? err.message : "Failed to submit expense", duration: 5000 });
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleClose = () => {
+    // In create mode the form hasn't been persisted yet — just close and clear
+    if (mode === "create") {
+      reset();
+      setReceiptPreview(null);
+      onClose();
+      return;
+    }
+
     if (isDirty) {
-      if (!confirm("You have unsaved changes. Are you sure you want to close?")) return;
+      toast.warning("You have unsaved changes", {
+        id: "unsaved-changes-warning",
+        description: "Save as draft to keep your changes.",
+        duration: 2000,
+      });
+      return;
     }
     onClose();
   };

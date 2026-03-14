@@ -7,7 +7,7 @@ import { type Id } from "@/convex/_generated/dataModel";
 import { type ExpenseStatus } from "@/lib/constants";
 import { format } from "date-fns";
 import { formatDistanceToNow } from "date-fns";
-import { useToast } from "@/components/ui/toast";
+import { toast } from "@/components/ui/toast";
 import { StatusBadge } from "./StatusBadge";
 import { VersionBadge } from "./VersionBadge";
 import { RejectionBanner } from "./RejectionBanner";
@@ -46,7 +46,7 @@ export function ExpenseDetailModal({
   onClose,
   expenseId,
 }: ExpenseDetailModalProps) {
-  const { toast } = useToast();
+
   const detail = useQuery(
     api.expenses.getExpenseDetail,
     expenseId ? { expenseId } : "skip"
@@ -70,9 +70,9 @@ export function ExpenseDetailModal({
     if (!expenseId) return;
     try {
       await submitExpense({ expenseId });
-      toast({ title: "Expense submitted for approval" });
+      toast.success("Expense submitted for approval");
     } catch (err) {
-      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to submit", variant: "destructive" });
+      toast.error("Error", { description: err instanceof Error ? err.message : "Failed to submit", duration: 5000 });
     }
   };
 
@@ -80,10 +80,10 @@ export function ExpenseDetailModal({
     if (!expenseId) return;
     try {
       await withdrawExpense({ expenseId });
-      toast({ title: "Expense withdrawn" });
+      toast.success("Expense withdrawn");
       setWithdrawConfirm(false);
     } catch (err) {
-      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to withdraw", variant: "destructive" });
+      toast.error("Error", { description: err instanceof Error ? err.message : "Failed to withdraw", duration: 5000 });
     }
   };
 
@@ -94,7 +94,7 @@ export function ExpenseDetailModal({
       setEditMode("resubmit");
       setEditModalOpen(true);
     } catch (err) {
-      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to start edit", variant: "destructive" });
+      toast.error("Error", { description: err instanceof Error ? err.message : "Failed to start edit", duration: 5000 });
     }
   };
 
