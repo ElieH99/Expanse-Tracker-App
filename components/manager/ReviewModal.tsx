@@ -40,6 +40,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 
 interface ReviewModalProps {
@@ -186,7 +189,7 @@ export function ReviewModal({
           ) : (
             <>
               <DialogHeader>
-                <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center justify-between flex-wrap gap-2 pr-8">
                   <div className="flex items-center gap-3 flex-wrap">
                     <DialogTitle className="text-xl">
                       {latestVersion?.title ?? "Expense"}
@@ -200,27 +203,37 @@ export function ReviewModal({
                   {/* Navigation arrows */}
                   {queue && currentIndex !== undefined && onNavigate && (
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        aria-label="Previous expense"
-                        disabled={currentIndex === 0}
-                        onClick={() => onNavigate(currentIndex - 1)}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            aria-label="Previous expense"
+                            disabled={currentIndex === 0}
+                            onClick={() => onNavigate(currentIndex - 1)}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Previous expense</TooltipContent>
+                      </Tooltip>
                       <span className="text-sm text-muted-foreground">
                         Reviewing {currentIndex + 1} of {queue.length} pending
                       </span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        aria-label="Next expense"
-                        disabled={currentIndex === queue.length - 1}
-                        onClick={() => onNavigate(currentIndex + 1)}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            aria-label="Next expense"
+                            disabled={currentIndex === queue.length - 1}
+                            onClick={() => onNavigate(currentIndex + 1)}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Next expense</TooltipContent>
+                      </Tooltip>
                     </div>
                   )}
                 </div>
@@ -236,7 +249,7 @@ export function ReviewModal({
                 />
               )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6">
                 {/* Left panel — ticket info */}
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3 text-sm">
@@ -304,6 +317,41 @@ export function ReviewModal({
                 {/* Right panel — actions */}
                 {isActionable && (
                   <div className="space-y-4">
+                    {/* Submitter info card */}
+                    <Card className="border-gray-100 bg-gray-50">
+                      <CardContent className="pt-3 pb-3 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-sm shrink-0">
+                          {(expense?.submittedByName?.firstName?.[0] ?? "")}{(expense?.submittedByName?.lastName?.[0] ?? "")}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {expense?.submittedByName?.firstName} {expense?.submittedByName?.lastName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Employee</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Current status */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                        Current status
+                      </span>
+                      {status && <StatusBadge status={status} />}
+                    </div>
+
+                    {/* Version context */}
+                    {expense && expense.currentVersion > 1 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                          Submission
+                        </span>
+                        <VersionBadge versionNumber={expense.currentVersion} />
+                      </div>
+                    )}
+
+                    <Separator />
+
                     <h3 className="font-semibold">Actions</h3>
 
                     {/* Approve */}
@@ -503,7 +551,7 @@ function ReceiptPreview({
     return (
       <div className="text-sm">
         <span className="text-muted-foreground">Receipt</span>
-        <div className="mt-1 h-24 w-24 bg-muted rounded animate-pulse" />
+        <Skeleton className="mt-1 h-24 w-24 rounded" />
       </div>
     );
   }

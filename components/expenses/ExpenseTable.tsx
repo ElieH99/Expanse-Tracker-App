@@ -13,9 +13,18 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
 import { type ExpenseStatus, EXPENSE_STATUSES } from "@/lib/constants";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { StatusBadge } from "./StatusBadge";
 import { AmountRangeSlider } from "@/components/ui/amount-range-slider";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { type DateRange } from "react-day-picker";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import {
   Select,
   SelectContent,
@@ -48,8 +57,7 @@ export function ExpenseTable({ onRowClick }: ExpenseTableProps) {
 
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const amountBounds = useMemo(() => {
     if (!expenses || expenses.length === 0) return { min: 0, max: 5000 };
@@ -79,19 +87,15 @@ export function ExpenseTable({ onRowClick }: ExpenseTableProps) {
       if (amountRange) {
         if (e.amount < amountRange[0] || e.amount > amountRange[1]) return false;
       }
-      if (dateFrom) {
-        const from = new Date(dateFrom).getTime();
+      if (dateRange?.from) {
         const date = e.expenseDate ?? e.updatedAt;
-        if (date < from) return false;
-      }
-      if (dateTo) {
-        const to = new Date(dateTo).getTime() + 86400000 - 1;
-        const date = e.expenseDate ?? e.updatedAt;
-        if (date > to) return false;
+        const to = dateRange.to ?? dateRange.from;
+        if (date < dateRange.from.getTime()) return false;
+        if (date > to.getTime() + 86400000 - 1) return false;
       }
       return true;
     });
-  }, [expenses, categoryFilter, statusFilter, amountRange, dateFrom, dateTo]);
+  }, [expenses, categoryFilter, statusFilter, amountRange, dateRange]);
 
   const columns = useMemo<ColumnDef<ExpenseRow>[]>(
     () => [
@@ -99,7 +103,37 @@ export function ExpenseTable({ onRowClick }: ExpenseTableProps) {
         accessorKey: "title",
         header: "Title",
         cell: ({ row }) => (
-          <span className="font-medium">{row.original.title || "Untitled"}</span>
+          <HoverCard openDelay={400} closeDelay={100}>
+            <HoverCardTrigger asChild>
+              <button
+                type="button"
+                className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors text-left truncate max-w-[200px]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {row.original.title || "Untitled"}
+              </button>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-72" align="start">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <StatusBadge status={row.original.status as ExpenseStatus} />
+                </div>
+                <div className="text-sm font-medium text-gray-900 line-clamp-2">
+                  {row.original.title || "Untitled"}
+                </div>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span>{row.original.categoryId ? categoryMap[row.original.categoryId] ?? "—" : "—"}</span>
+                  <span>·</span>
+                  <span className="font-medium text-gray-700">
+                    {row.original.amount?.toFixed(2)} {row.original.currencyCode}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Updated {formatDistanceToNow(new Date(row.original.updatedAt), { addSuffix: true })}
+                </p>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
         ),
       },
       {
@@ -126,6 +160,14 @@ export function ExpenseTable({ onRowClick }: ExpenseTableProps) {
         ),
       },
       {
+        accessorKey: "expenseDate",
+        header: "Expense Date",
+        cell: ({ row }) =>
+          row.original.expenseDate
+            ? format(new Date(row.original.expenseDate), "dd MMM yyyy")
+            : "—",
+      },
+      {
         accessorKey: "updatedAt",
         header: "Last Updated",
         cell: ({ row }) =>
@@ -148,13 +190,14 @@ export function ExpenseTable({ onRowClick }: ExpenseTableProps) {
 
   if (expenses === undefined) {
     return (
-      <div className="animate-pulse" role="status" aria-label="Loading expenses">
+      <div className="space-y-3" role="status" aria-label="Loading expenses">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex gap-4 py-3 border-b border-gray-100">
-            <div className="h-4 bg-gray-200 rounded w-32" />
-            <div className="h-4 bg-gray-200 rounded w-20" />
-            <div className="h-4 bg-gray-200 rounded w-16" />
-            <div className="h-4 bg-gray-200 rounded w-24" />
+          <div key={i} className="flex items-center gap-4 py-2">
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-5 w-24 rounded-full" />
+            <Skeleton className="h-4 w-28" />
           </div>
         ))}
       </div>
@@ -205,22 +248,22 @@ export function ExpenseTable({ onRowClick }: ExpenseTableProps) {
         />
 
         {/* Date range */}
-        <div className="flex items-center gap-1 rounded-md border border-input bg-background px-3 h-10">
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="text-sm bg-transparent outline-none w-[130px] text-foreground"
-            aria-label="Date from"
+        <div className="flex items-center gap-2">
+          <DateRangePicker
+            value={dateRange}
+            onChange={setDateRange}
+            placeholder="Filter by date"
+            className="w-[260px]"
           />
-          <span className="text-muted-foreground text-sm px-0.5">–</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="text-sm bg-transparent outline-none w-[130px] text-foreground"
-            aria-label="Date to"
-          />
+          {dateRange && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDateRange(undefined)}
+            >
+              Clear
+            </Button>
+          )}
         </div>
       </div>
 

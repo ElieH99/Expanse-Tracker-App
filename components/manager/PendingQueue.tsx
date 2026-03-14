@@ -13,10 +13,21 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
 import { type ExpenseStatus } from "@/lib/constants";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { StatusBadge } from "@/components/expenses/StatusBadge";
 import { ReviewModal } from "./ReviewModal";
 import { AmountRangeSlider } from "@/components/ui/amount-range-slider";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { type DateRange } from "react-day-picker";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { CheckCircle2 } from "lucide-react";
 
 interface PendingRow {
   _id: Id<"expenses">;
@@ -38,8 +49,7 @@ export function PendingQueue() {
   const [reviewIndex, setReviewIndex] = useState<number | null>(null);
 
   const [amountRange, setAmountRange] = useState<[number, number] | null>(null);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const amountBounds = useMemo(() => {
     if (!pending || pending.length === 0) return { min: 0, max: 5000 };
@@ -64,17 +74,14 @@ export function PendingQueue() {
       if (amountRange) {
         if (e.amount < amountRange[0] || e.amount > amountRange[1]) return false;
       }
-      if (dateFrom) {
-        const from = new Date(dateFrom).getTime();
-        if (e.submittedAt < from) return false;
-      }
-      if (dateTo) {
-        const to = new Date(dateTo).getTime() + 86400000 - 1;
-        if (e.submittedAt > to) return false;
+      if (dateRange?.from) {
+        const to = dateRange.to ?? dateRange.from;
+        if (e.submittedAt < dateRange.from.getTime()) return false;
+        if (e.submittedAt > to.getTime() + 86400000 - 1) return false;
       }
       return true;
     });
-  }, [pending, amountRange, dateFrom, dateTo]);
+  }, [pending, amountRange, dateRange]);
 
   const columns = useMemo<ColumnDef<PendingRow>[]>(
     () => [
@@ -86,6 +93,39 @@ export function PendingQueue() {
       {
         accessorKey: "title",
         header: "Ticket Title",
+        cell: ({ row }) => (
+          <HoverCard openDelay={400} closeDelay={100}>
+            <HoverCardTrigger asChild>
+              <button
+                type="button"
+                className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors text-left truncate max-w-[200px]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {row.original.title}
+              </button>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-72" align="start">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <StatusBadge status={row.original.status as ExpenseStatus} />
+                </div>
+                <div className="text-sm font-medium text-gray-900 line-clamp-2">
+                  {row.original.title}
+                </div>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span>{row.original.categoryId ? categoryMap[row.original.categoryId] ?? "—" : "—"}</span>
+                  <span>·</span>
+                  <span className="font-medium text-gray-700">
+                    {row.original.amount.toFixed(2)} {row.original.currencyCode}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Submitted {formatDistanceToNow(new Date(row.original.submittedAt), { addSuffix: true })}
+                </p>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+        ),
       },
       {
         accessorKey: "categoryId",
@@ -129,15 +169,15 @@ export function PendingQueue() {
 
   if (pending === undefined) {
     return (
-      <div className="animate-pulse mt-4" role="status" aria-label="Loading pending expenses">
+      <div className="space-y-3 mt-4" role="status" aria-label="Loading pending expenses">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex gap-4 py-3 border-b border-gray-100">
-            <div className="h-4 bg-gray-200 rounded w-28" />
-            <div className="h-4 bg-gray-200 rounded w-32" />
-            <div className="h-4 bg-gray-200 rounded w-20" />
-            <div className="h-4 bg-gray-200 rounded w-16" />
-            <div className="h-4 bg-gray-200 rounded w-24" />
-            <div className="h-4 bg-gray-200 rounded w-20" />
+          <div key={i} className="flex items-center gap-4 py-2">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-5 w-20 rounded-full" />
           </div>
         ))}
       </div>
@@ -146,9 +186,14 @@ export function PendingQueue() {
 
   if (pending.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <h3 className="text-sm font-semibold text-gray-900 mb-1">No pending expenses</h3>
-        <p className="text-sm text-gray-500">All caught up — new submissions will appear here</p>
+      <div className="py-16 flex flex-col items-center text-center">
+        <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mb-4">
+          <CheckCircle2 className="w-6 h-6 text-green-500" />
+        </div>
+        <h3 className="text-base font-semibold text-gray-900 mb-1">All caught up</h3>
+        <p className="text-sm text-muted-foreground">
+          No expenses are waiting for review right now.
+        </p>
       </div>
     );
   }
@@ -169,22 +214,22 @@ export function PendingQueue() {
         />
 
         {/* Date range */}
-        <div className="flex items-center gap-1 rounded-md border border-input bg-background px-3 h-10">
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="text-sm bg-transparent outline-none w-[130px] text-foreground"
-            aria-label="Date from"
+        <div className="flex items-center gap-2">
+          <DateRangePicker
+            value={dateRange}
+            onChange={setDateRange}
+            placeholder="Filter by date"
+            className="w-[260px]"
           />
-          <span className="text-muted-foreground text-sm px-0.5">–</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="text-sm bg-transparent outline-none w-[130px] text-foreground"
-            aria-label="Date to"
-          />
+          {dateRange && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDateRange(undefined)}
+            >
+              Clear
+            </Button>
+          )}
         </div>
       </div>
 

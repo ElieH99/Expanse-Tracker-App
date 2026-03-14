@@ -6,6 +6,7 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { LogOut, Receipt } from "lucide-react";
 
 export default function DashboardLayout({
@@ -63,7 +64,9 @@ export default function DashboardLayout({
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {children}
+        <TooltipProvider>
+          {children}
+        </TooltipProvider>
       </main>
     </div>
   );

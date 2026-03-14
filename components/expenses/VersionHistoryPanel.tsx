@@ -38,6 +38,17 @@ export function VersionHistoryPanel({ versions, currentStatus }: VersionHistoryP
 
   if (versions.length === 0) return null;
 
+  if (versions.length === 1) {
+    return (
+      <div>
+        <h4 className="text-sm font-semibold mb-3">Version History</h4>
+        <p className="text-xs text-muted-foreground py-2 px-1">
+          First submission — no prior versions.
+        </p>
+      </div>
+    );
+  }
+
   const toggle = (versionNumber: number) => {
     setExpandedVersions((prev) => {
       const next = new Set(prev);

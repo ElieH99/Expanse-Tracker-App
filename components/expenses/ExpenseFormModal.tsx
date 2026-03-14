@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Upload, X, Loader2 } from "lucide-react";
 
 type Mode = "create" | "edit" | "resubmit";
@@ -256,11 +257,6 @@ export function ExpenseFormModal({
     onClose();
   };
 
-  const expenseDateValue = watch("expenseDate");
-  const dateString = expenseDateValue
-    ? new Date(expenseDateValue).toISOString().split("T")[0]
-    : new Date().toISOString().split("T")[0];
-
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -356,14 +352,12 @@ export function ExpenseFormModal({
 
             <div className="space-y-2">
               <Label htmlFor="expenseDate">Expense Date *</Label>
-              <Input
+              <DatePicker
                 id="expenseDate"
-                type="date"
-                value={dateString}
-                onChange={(e) => {
-                  const d = new Date(e.target.value);
-                  setValue("expenseDate", d.getTime(), { shouldDirty: true, shouldValidate: true });
-                }}
+                value={watch("expenseDate") ? new Date(watch("expenseDate")) : undefined}
+                onChange={(date) => setValue("expenseDate", date ? date.getTime() : Date.now(), { shouldDirty: true, shouldValidate: true })}
+                placeholder="Select expense date"
+                disableFuture
               />
               {errors.expenseDate && <p className="text-sm text-red-600">{errors.expenseDate.message}</p>}
             </div>

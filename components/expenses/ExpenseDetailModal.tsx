@@ -33,6 +33,8 @@ import {
 } from "@/components/expenses/AlertDialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
 interface ExpenseDetailModalProps {
@@ -140,38 +142,45 @@ export function ExpenseDetailModal({
               )}
 
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Category</span>
-                    <p className="font-medium">{categoryName}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Amount</span>
-                    <p className="font-medium">
-                      {displayVersion?.amount.toFixed(2)} {displayVersion?.currencyCode}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Expense Date</span>
-                    <p className="font-medium">
-                      {displayVersion?.expenseDate
-                        ? format(new Date(displayVersion.expenseDate), "dd MMM yyyy")
-                        : "—"}
-                    </p>
-                  </div>
-                </div>
+                <Card className="bg-gray-50 border-gray-100">
+                  <CardContent className="pt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    <div>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide">Category</span>
+                      <p className="font-medium text-gray-800 mt-0.5">{categoryName}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide">Amount</span>
+                      <p className="font-medium text-gray-800 mt-0.5">
+                        {displayVersion?.amount.toFixed(2)} {displayVersion?.currencyCode}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide">Expense Date</span>
+                      <p className="font-medium text-gray-800 mt-0.5">
+                        {displayVersion?.expenseDate
+                          ? format(new Date(displayVersion.expenseDate), "dd MMM yyyy")
+                          : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide">Created</span>
+                      <p className="font-medium text-gray-800 mt-0.5">
+                        {expense ? formatDistanceToNow(new Date(expense.createdAt), { addSuffix: true }) : "—"}
+                      </p>
+                    </div>
+                    {displayVersion?.notes && (
+                      <div className="col-span-2">
+                        <span className="text-xs text-muted-foreground uppercase tracking-wide">Notes</span>
+                        <p className="text-gray-700 mt-0.5">{displayVersion.notes}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
                 <div className="text-sm">
                   <span className="text-muted-foreground">Description</span>
                   <p className="mt-1">{displayVersion?.description}</p>
                 </div>
-
-                {displayVersion?.notes && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Notes</span>
-                    <p className="mt-1">{displayVersion.notes}</p>
-                  </div>
-                )}
 
                 {displayVersion?.receiptStorageId && (
                   <ReceiptPreview
@@ -318,7 +327,7 @@ function ReceiptPreview({
     return (
       <div className="text-sm">
         <span className="text-muted-foreground">Receipt</span>
-        <div className="mt-1 h-24 w-24 bg-muted rounded animate-pulse" />
+        <Skeleton className="mt-1 h-24 w-24 rounded" />
       </div>
     );
   }

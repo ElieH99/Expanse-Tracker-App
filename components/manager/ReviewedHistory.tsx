@@ -19,6 +19,11 @@ import { StatusBadge } from "@/components/expenses/StatusBadge";
 import { ReviewModal } from "./ReviewModal";
 import { Input } from "@/components/ui/input";
 import { AmountRangeSlider } from "@/components/ui/amount-range-slider";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { type DateRange } from "react-day-picker";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { History } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -48,8 +53,7 @@ export function ReviewedHistory() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [nameSearch, setNameSearch] = useState("");
   const [amountRange, setAmountRange] = useState<[number, number] | null>(null);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [sorting, setSorting] = useState<SortingState>([
     { id: "decidedOn", desc: true },
   ]);
@@ -88,17 +92,14 @@ export function ReviewedHistory() {
         if (r.amount < amountRange[0] || r.amount > amountRange[1]) return false;
       }
       const decidedAt = r.approvedAt ?? r.rejectedAt ?? r.closedAt ?? r.updatedAt;
-      if (dateFrom) {
-        const from = new Date(dateFrom).getTime();
-        if (decidedAt < from) return false;
-      }
-      if (dateTo) {
-        const to = new Date(dateTo).getTime() + 86400000 - 1;
-        if (decidedAt > to) return false;
+      if (dateRange?.from) {
+        const to = dateRange.to ?? dateRange.from;
+        if (decidedAt < dateRange.from.getTime()) return false;
+        if (decidedAt > to.getTime() + 86400000 - 1) return false;
       }
       return true;
     });
-  }, [reviewed, nameSearch, amountRange, dateFrom, dateTo]);
+  }, [reviewed, nameSearch, amountRange, dateRange]);
 
   const columns = useMemo<ColumnDef<HistoryRow>[]>(
     () => [
@@ -156,17 +157,29 @@ export function ReviewedHistory() {
 
   if (reviewed === undefined) {
     return (
-      <div className="animate-pulse mt-4" role="status" aria-label="Loading reviewed expenses">
+      <div className="space-y-3 mt-4" role="status" aria-label="Loading reviewed expenses">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex gap-4 py-3 border-b border-gray-100">
-            <div className="h-4 bg-gray-200 rounded w-28" />
-            <div className="h-4 bg-gray-200 rounded w-32" />
-            <div className="h-4 bg-gray-200 rounded w-20" />
-            <div className="h-4 bg-gray-200 rounded w-16" />
-            <div className="h-4 bg-gray-200 rounded w-20" />
-            <div className="h-4 bg-gray-200 rounded w-24" />
+          <div key={i} className="flex items-center gap-4 py-2">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+            <Skeleton className="h-4 w-24" />
           </div>
         ))}
+      </div>
+    );
+  }
+
+  if (reviewed.length === 0) {
+    return (
+      <div className="py-12 flex flex-col items-center text-center text-muted-foreground">
+        <History className="w-8 h-8 mb-3 text-gray-300" />
+        <p className="text-sm font-medium text-gray-600">No actioned expenses yet</p>
+        <p className="text-xs mt-1">
+          Expenses you approve, reject, or close will appear here.
+        </p>
       </div>
     );
   }
@@ -221,22 +234,22 @@ export function ReviewedHistory() {
         />
 
         {/* Date range */}
-        <div className="flex items-center gap-1 rounded-md border border-input bg-background px-3 h-10">
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="text-sm bg-transparent outline-none w-[130px] text-foreground"
-            aria-label="Date from"
+        <div className="flex items-center gap-2">
+          <DateRangePicker
+            value={dateRange}
+            onChange={setDateRange}
+            placeholder="Filter by date"
+            className="w-[260px]"
           />
-          <span className="text-muted-foreground text-sm px-0.5">–</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="text-sm bg-transparent outline-none w-[130px] text-foreground"
-            aria-label="Date to"
-          />
+          {dateRange && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDateRange(undefined)}
+            >
+              Clear
+            </Button>
+          )}
         </div>
       </div>
 

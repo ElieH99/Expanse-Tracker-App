@@ -51,7 +51,16 @@ function getActionLabel(entry: HistoryEntry): string {
 }
 
 export function StatusTimeline({ history }: StatusTimelineProps) {
-  if (history.length === 0) return null;
+  if (history.length === 0) {
+    return (
+      <div className="space-y-0">
+        <h4 className="text-base font-semibold text-gray-900 mb-3">Status Timeline</h4>
+        <p className="text-xs text-muted-foreground py-3 px-1 italic">
+          No status changes recorded yet.
+        </p>
+      </div>
+    );
+  }
 
   const reversed = [...history].reverse();
 

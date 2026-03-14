@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PendingQueue } from "./PendingQueue";
 import { ReviewedHistory } from "./ReviewedHistory";
 import { EmployeeDashboard } from "@/components/expenses/EmployeeDashboard";
@@ -56,13 +57,19 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
-      {value === undefined ? (
-        <Skeleton className="h-8 w-16 mt-1" />
-      ) : (
-        <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
-      )}
-    </div>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          {label}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {value === undefined ? (
+          <Skeleton className="h-8 w-16" />
+        ) : (
+          <p className={`text-2xl font-bold ${color}`}>{value}</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
