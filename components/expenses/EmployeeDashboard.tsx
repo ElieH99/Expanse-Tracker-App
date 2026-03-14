@@ -11,7 +11,7 @@ import { ExpenseSummaryStrip } from "./ExpenseSummaryStrip";
 import { Button } from "@/components/ui/button";
 import { Plus, ReceiptText, FilePlus, Send, CheckCircle } from "lucide-react";
 
-export function EmployeeDashboard() {
+export function EmployeeDashboard({ hideSummaryStrip = false }: { hideSummaryStrip?: boolean } = {}) {
   const expenses = useQuery(api.expenses.getMyExpenses);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -75,7 +75,7 @@ export function EmployeeDashboard() {
         </div>
       ) : (
         <>
-          {hasExpenses && <ExpenseSummaryStrip />}
+          {hasExpenses && !hideSummaryStrip && <ExpenseSummaryStrip />}
           <ExpenseTable onRowClick={(id) => setDetailId(id)} />
         </>
       )}

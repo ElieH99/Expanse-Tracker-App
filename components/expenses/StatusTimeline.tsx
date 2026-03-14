@@ -121,11 +121,20 @@ export function StatusTimeline({ history }: StatusTimelineProps) {
                 </div>
               )}
 
-              {/* Comment */}
+              {/* Comment / reason block */}
               {entry.comment && (
-                <p className="mt-1 text-sm text-gray-600 bg-gray-50 rounded p-2 border border-gray-100">
-                  &ldquo;{entry.comment}&rdquo;
-                </p>
+                <div
+                  className={cn(
+                    "mt-2 ml-6 rounded-r-md px-3 py-2 border-l-4",
+                    entry.newStatus === "Rejected"
+                      ? "border-amber-400 bg-amber-50"
+                      : entry.newStatus === "Closed"
+                      ? "border-red-400 bg-red-50"
+                      : "border-gray-200 bg-gray-50"
+                  )}
+                >
+                  <p className="text-sm text-muted-foreground italic">{entry.comment}</p>
+                </div>
               )}
             </div>
           );

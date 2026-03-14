@@ -189,9 +189,9 @@ export function ReviewModal({
           ) : (
             <>
               <DialogHeader>
-                <div className="flex items-center justify-between flex-wrap gap-2 pr-8">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <DialogTitle className="text-xl">
+                <div className="flex items-center justify-between gap-2 pr-8">
+                  <div className="flex items-center gap-3 flex-wrap min-w-0">
+                    <DialogTitle className="text-xl truncate">
                       {latestVersion?.title ?? "Expense"}
                     </DialogTitle>
                     {status && <StatusBadge status={status} />}
@@ -200,9 +200,9 @@ export function ReviewModal({
                     )}
                   </div>
 
-                  {/* Navigation arrows */}
+                  {/* Navigation arrows — unified in the header bar */}
                   {queue && currentIndex !== undefined && onNavigate && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
@@ -217,8 +217,8 @@ export function ReviewModal({
                         </TooltipTrigger>
                         <TooltipContent>Previous expense</TooltipContent>
                       </Tooltip>
-                      <span className="text-sm text-muted-foreground">
-                        Reviewing {currentIndex + 1} of {queue.length} pending
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">
+                        {currentIndex + 1} of {queue.length} pending
                       </span>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -242,75 +242,79 @@ export function ReviewModal({
                 </DialogDescription>
               </DialogHeader>
 
-              {expense && expense.currentVersion > 1 && expense.rejectionReason && expense.rejectionComment && (
+              {expense && expense.currentVersion > 1 && status !== "Approved" && expense.rejectionReason && expense.rejectionComment && (
                 <RejectionBanner
                   rejectionReason={expense.rejectionReason}
                   rejectionComment={expense.rejectionComment}
                 />
               )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6">
+              <div className={`grid grid-cols-1 gap-6 ${isActionable ? "lg:grid-cols-[3fr_2fr]" : ""}`}>
                 {/* Left panel — ticket info */}
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex flex-col gap-6">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <span className="text-muted-foreground">Category</span>
-                      <p className="font-medium">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide">Category</span>
+                      <p className="text-sm font-medium mt-0.5">
                         {latestVersion
                           ? detail.categoriesMap[latestVersion.categoryId] ?? "—"
                           : "—"}
                       </p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Amount</span>
-                      <p className="font-medium">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide">Amount</span>
+                      <p className="text-sm font-medium mt-0.5">
                         {latestVersion?.amount.toFixed(2)} {latestVersion?.currencyCode}
                       </p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Expense Date</span>
-                      <p className="font-medium">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide">Expense Date</span>
+                      <p className="text-sm font-medium mt-0.5">
                         {latestVersion?.expenseDate
                           ? format(new Date(latestVersion.expenseDate), "dd MMM yyyy")
                           : "—"}
                       </p>
                     </div>
+                    {latestVersion?.notes && (
+                      <div>
+                        <span className="text-xs text-muted-foreground uppercase tracking-wide">Notes</span>
+                        <p className="text-sm font-medium mt-0.5">{latestVersion.notes}</p>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Description</span>
-                    <p className="mt-1">{latestVersion?.description}</p>
+                  <div className="border-t border-border pt-6">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wide">Description</span>
+                    <p className="text-sm mt-1">{latestVersion?.description}</p>
                   </div>
 
-                  {latestVersion?.notes && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Notes</span>
-                      <p className="mt-1">{latestVersion.notes}</p>
+                  {latestVersion?.receiptStorageId && expenseId && (
+                    <div className="border-t border-border pt-6">
+                      <ReceiptPreview
+                        storageId={latestVersion.receiptStorageId}
+                        expenseId={expenseId}
+                      />
                     </div>
                   )}
 
-                  {latestVersion?.receiptStorageId && expenseId && (
-                    <ReceiptPreview
-                      storageId={latestVersion.receiptStorageId}
-                      expenseId={expenseId}
-                    />
-                  )}
-
-                  <Separator />
-
-                  {detail.versions.length > 0 && (
-                    <VersionHistoryPanel
-                      /* eslint-disable @typescript-eslint/no-explicit-any */
-                      versions={(detail.versions as any[]).map((v: any) => ({
-                        ...v,
-                        categoryName: detail.categoriesMap[v.categoryId] ?? "Unknown",
-                      }))}
-                      currentStatus={expense?.status ?? ""}
-                    />
+                  {detail.versions.length > 1 && (
+                    <div className="border-t border-border pt-6">
+                      <VersionHistoryPanel
+                        /* eslint-disable @typescript-eslint/no-explicit-any */
+                        versions={(detail.versions as any[]).map((v: any) => ({
+                          ...v,
+                          categoryName: detail.categoriesMap[v.categoryId] ?? "Unknown",
+                        }))}
+                        currentStatus={expense?.status ?? ""}
+                        history={detail.history}
+                      />
+                    </div>
                   )}
 
                   {detail.history.length > 0 && (
-                    <StatusTimeline history={detail.history} />
+                    <div className="border-t border-border pt-6">
+                      <StatusTimeline history={detail.history} />
+                    </div>
                   )}
                 </div>
 
@@ -366,7 +370,7 @@ export function ReviewModal({
                       </Button>
                       {activeAction === "approve" && (
                         <div className="space-y-2">
-                          <Label>Add a note for the employee (optional)</Label>
+                          <Label className="text-sm">Add a note for the employee (optional)</Label>
                           <Textarea
                             value={approvalNote}
                             onChange={(e) => setApprovalNote(e.target.value)}
@@ -395,7 +399,7 @@ export function ReviewModal({
                       </Button>
                       {activeAction === "reject" && (
                         <div className="space-y-2">
-                          <Label>Rejection Reason *</Label>
+                          <Label className="text-sm">Rejection Reason *</Label>
                           <Select value={rejectionReason} onValueChange={setRejectionReason}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select reason" />
@@ -408,7 +412,7 @@ export function ReviewModal({
                               ))}
                             </SelectContent>
                           </Select>
-                          <Label>Rejection Comment * (min 10 chars)</Label>
+                          <Label className="text-sm">Rejection Comment * (min 10 chars)</Label>
                           <Textarea
                             value={rejectionComment}
                             onChange={(e) => setRejectionComment(e.target.value)}
@@ -430,11 +434,11 @@ export function ReviewModal({
                       )}
                     </div>
 
-                    {/* Close */}
-                    <div className="rounded-md border border-red-300 bg-red-50 p-4 space-y-3">
+                    {/* Close — outline style to visually distinguish from reversible actions */}
+                    <div className="rounded-md border border-red-200 bg-red-50/40 p-4 space-y-3">
                       <Button
-                        variant="destructive"
-                        className="w-full bg-red-700 hover:bg-red-800"
+                        variant="outline"
+                        className="w-full text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700"
                         onClick={() => setActiveAction("close")}
                         disabled={actionLoading}
                       >
@@ -442,7 +446,7 @@ export function ReviewModal({
                       </Button>
                       {activeAction === "close" && (
                         <div className="space-y-2">
-                          <Label>Close Reason *</Label>
+                          <Label className="text-sm">Close Reason *</Label>
                           <Select value={closeReason} onValueChange={setCloseReason}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select reason" />
@@ -455,7 +459,7 @@ export function ReviewModal({
                               ))}
                             </SelectContent>
                           </Select>
-                          <Label>Close Comment * (min 10 chars)</Label>
+                          <Label className="text-sm">Close Comment * (min 10 chars)</Label>
                           <Textarea
                             value={closeComment}
                             onChange={(e) => setCloseComment(e.target.value)}
@@ -547,31 +551,17 @@ function ReceiptPreview({
     expenseId,
   });
 
-  if (!url) {
-    return (
-      <div className="text-sm">
-        <span className="text-muted-foreground">Receipt</span>
-        <Skeleton className="mt-1 h-24 w-24 rounded" />
-      </div>
-    );
-  }
-
   return (
     <div className="text-sm">
-      <span className="text-muted-foreground">Receipt</span>
-      <div className="mt-1 flex gap-2">
-        <a href={url} target="_blank" rel="noopener noreferrer">
-          <img src={url} alt="Receipt" className="max-h-48 rounded border cursor-pointer hover:opacity-80" />
-        </a>
-        <a
-          href={url}
-          download
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center text-xs text-primary underline hover:no-underline self-end"
-        >
-          Download
-        </a>
+      <span className="text-xs text-muted-foreground uppercase tracking-wide">Receipt</span>
+      <div className="mt-1 h-48 w-full rounded border bg-muted flex items-center justify-center overflow-hidden">
+        {!url ? (
+          <Skeleton className="h-full w-full" />
+        ) : (
+          <a href={url} target="_blank" rel="noopener noreferrer" className="h-full w-full flex items-center justify-center">
+            <img src={url} alt="Receipt" className="max-h-full max-w-full object-contain cursor-pointer hover:opacity-80" />
+          </a>
+        )}
       </div>
     </div>
   );

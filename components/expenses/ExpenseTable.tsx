@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CategoryFilter } from "@/components/ui/category-filter";
 
 interface ExpenseRow {
   _id: Id<"expenses">;
@@ -55,7 +56,7 @@ export function ExpenseTable({ onRowClick }: ExpenseTableProps) {
     { id: "updatedAt", desc: true },
   ]);
 
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
@@ -82,7 +83,10 @@ export function ExpenseTable({ onRowClick }: ExpenseTableProps) {
   const filteredData = useMemo(() => {
     if (!expenses) return [];
     return expenses.filter((e) => {
-      if (categoryFilter !== "all" && e.categoryId !== categoryFilter) return false;
+      if (selectedCategories.length > 0) {
+        const catName = e.categoryId ? categoryMap[e.categoryId] : undefined;
+        if (!catName || !selectedCategories.includes(catName)) return false;
+      }
       if (statusFilter !== "all" && e.status !== statusFilter) return false;
       if (amountRange) {
         if (e.amount < amountRange[0] || e.amount > amountRange[1]) return false;
@@ -95,7 +99,7 @@ export function ExpenseTable({ onRowClick }: ExpenseTableProps) {
       }
       return true;
     });
-  }, [expenses, categoryFilter, statusFilter, amountRange, dateRange]);
+  }, [expenses, selectedCategories, categoryMap, statusFilter, amountRange, dateRange]);
 
   const columns = useMemo<ColumnDef<ExpenseRow>[]>(
     () => [
@@ -209,19 +213,11 @@ export function ExpenseTable({ onRowClick }: ExpenseTableProps) {
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Category */}
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories?.map((cat: { _id: string; name: string }) => (
-              <SelectItem key={cat._id} value={cat._id}>
-                {cat.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <CategoryFilter
+          selectedCategories={selectedCategories}
+          onSelectionChange={setSelectedCategories}
+          categories={categories?.map((c: { name: string }) => c.name) ?? []}
+        />
 
         {/* Status */}
         <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -252,7 +248,7 @@ export function ExpenseTable({ onRowClick }: ExpenseTableProps) {
           <DateRangePicker
             value={dateRange}
             onChange={setDateRange}
-            placeholder="Filter by date"
+            placeholder="Filter by expense date"
             className="w-[260px]"
           />
           {dateRange && (
@@ -265,6 +261,23 @@ export function ExpenseTable({ onRowClick }: ExpenseTableProps) {
             </Button>
           )}
         </div>
+
+        {/* Reset all */}
+        {(selectedCategories.length > 0 || statusFilter !== "all" || amountRange !== null || !!dateRange) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={() => {
+              setSelectedCategories([]);
+              setStatusFilter("all");
+              setAmountRange(null);
+              setDateRange(undefined);
+            }}
+          >
+            Reset filters
+          </Button>
+        )}
       </div>
 
       <div className="rounded-md border bg-white overflow-x-auto">

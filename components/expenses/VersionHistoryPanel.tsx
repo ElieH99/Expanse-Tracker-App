@@ -18,9 +18,16 @@ interface VersionEntry {
   submittedAt: number;
 }
 
+interface HistoryEntry {
+  versionNumber: number;
+  newStatus: string;
+  comment?: string;
+}
+
 interface VersionHistoryPanelProps {
   versions: VersionEntry[];
   currentStatus: string;
+  history?: HistoryEntry[];
 }
 
 function getOutcomeLabel(versionIndex: number, totalVersions: number, currentStatus: string): string {
@@ -33,7 +40,14 @@ function getOutcomeLabel(versionIndex: number, totalVersions: number, currentSta
   return "Rejected";
 }
 
-export function VersionHistoryPanel({ versions, currentStatus }: VersionHistoryPanelProps) {
+export function VersionHistoryPanel({ versions, currentStatus, history = [] }: VersionHistoryPanelProps) {
+  // Build a map from versionNumber → rejection/close history event
+  const versionOutcomeMap = new Map<number, HistoryEntry>();
+  for (const entry of history) {
+    if (entry.newStatus === "Rejected" || entry.newStatus === "Closed") {
+      versionOutcomeMap.set(entry.versionNumber, entry);
+    }
+  }
   const [expandedVersions, setExpandedVersions] = useState<Set<number>>(new Set());
 
   if (versions.length === 0) return null;
@@ -61,13 +75,19 @@ export function VersionHistoryPanel({ versions, currentStatus }: VersionHistoryP
     });
   };
 
+  const sortedVersions = [...versions].sort((a, b) => b.versionNumber - a.versionNumber);
+
   return (
     <div>
       <h4 className="text-sm font-semibold mb-3">Version History</h4>
       <div className="space-y-2">
-        {versions.map((version, idx) => {
+        {sortedVersions.map((version) => {
           const isExpanded = expandedVersions.has(version.versionNumber);
-          const outcome = getOutcomeLabel(idx, versions.length, currentStatus);
+          const isLatest = version.versionNumber === versions.length;
+          const outcome = isLatest
+            ? getOutcomeLabel(versions.length - 1, versions.length, currentStatus)
+            : "Rejected";
+          const outcomeEntry = versionOutcomeMap.get(version.versionNumber);
 
           return (
             <div key={version._id} className="border rounded-md">
@@ -118,6 +138,11 @@ export function VersionHistoryPanel({ versions, currentStatus }: VersionHistoryP
                     <div>
                       <span className="text-muted-foreground">Notes:</span>{" "}
                       {version.notes}
+                    </div>
+                  )}
+                  {outcomeEntry && outcomeEntry.comment && (
+                    <div className={`border-l-4 px-3 py-2 rounded-r-md mt-2 ${outcomeEntry.newStatus === "Rejected" ? "border-amber-400 bg-amber-50" : "border-red-400 bg-red-50"}`}>
+                      <p className="text-sm italic text-muted-foreground">{outcomeEntry.comment}</p>
                     </div>
                   )}
                 </div>

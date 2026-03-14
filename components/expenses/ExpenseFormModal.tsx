@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "convex/react";
+import { ConvexError } from "convex/values";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
 import { expenseFormSchema, type ExpenseFormValues } from "@/lib/validators";
@@ -30,7 +31,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Upload, X, Loader2 } from "lucide-react";
+import { Upload, X, Loader2, Info } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 type Mode = "create" | "edit" | "resubmit";
 
@@ -55,6 +57,12 @@ export function ExpenseFormModal({
 }: ExpenseFormModalProps) {
 
   const categories = useQuery(api.categories.listCategories);
+  const existingReceiptUrl = useQuery(
+    api.files.getReceiptUrl,
+    open && expenseId && defaultValues?.receiptStorageId
+      ? { storageId: defaultValues.receiptStorageId as Id<"_storage">, expenseId }
+      : "skip"
+  );
   const createDraft = useMutation(api.expenses.createDraft);
   const saveDraft = useMutation(api.expenses.saveDraft);
   const submitExpense = useMutation(api.expenses.submitExpense);
@@ -62,7 +70,9 @@ export function ExpenseFormModal({
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
 
   const [uploading, setUploading] = useState(false);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(
+    defaultValues?.receiptStorageId ? "existing" : null
+  );
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -103,10 +113,20 @@ export function ExpenseFormModal({
         receiptStorageId: "",
         ...defaultValues,
       });
-      if (defaultValues.receiptStorageId) {
-        setReceiptPreview("existing");
-      }
+      setReceiptPreview(defaultValues.receiptStorageId ? "existing" : null);
     } else if (open && !defaultValues) {
+      reset({
+        title: "",
+        description: "",
+        amount: undefined as unknown as number,
+        currencyCode: "USD",
+        categoryId: "",
+        expenseDate: Date.now(),
+        notes: "",
+        receiptStorageId: "",
+      });
+      setReceiptPreview(null);
+    } else if (!open) {
       reset({
         title: "",
         description: "",
@@ -183,7 +203,12 @@ export function ExpenseFormModal({
       }
       onClose();
     } catch (err) {
-      toast.error("Error", { description: err instanceof Error ? err.message : "Failed to save draft", duration: 5000 });
+      const message = err instanceof ConvexError
+        ? (err.data as string)
+        : err instanceof Error
+          ? (err.message.split("Uncaught ConvexError: ")[1]?.split(" Called by")[0] ?? "Failed to save draft")
+          : "Failed to save draft";
+      toast.error("Error", { description: message, duration: 5000 });
     } finally {
       setSaving(false);
     }
@@ -231,7 +256,12 @@ export function ExpenseFormModal({
       }
       onClose();
     } catch (err) {
-      toast.error("Error", { description: err instanceof Error ? err.message : "Failed to submit expense", duration: 5000 });
+      const message = err instanceof ConvexError
+        ? (err.data as string)
+        : err instanceof Error
+          ? (err.message.split("Uncaught ConvexError: ")[1]?.split(" Called by")[0] ?? "Failed to submit expense")
+          : "Failed to submit expense";
+      toast.error("Error", { description: message, duration: 5000 });
     } finally {
       setSubmitting(false);
     }
@@ -364,7 +394,15 @@ export function ExpenseFormModal({
           </div>
 
           <div className="space-y-2">
-            <Label>Receipt *</Label>
+            <div className="flex items-center gap-1.5">
+              <Label>Receipt *</Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>OCR feature coming soon</TooltipContent>
+              </Tooltip>
+            </div>
             <div className="border-2 border-dashed rounded-md p-4">
               {uploading ? (
                 <div className="flex items-center justify-center gap-2 py-4">
@@ -375,10 +413,28 @@ export function ExpenseFormModal({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {receiptPreview && receiptPreview !== "existing" ? (
-                      <img src={receiptPreview} alt="Receipt preview" className="h-16 w-16 object-cover rounded" />
+                      <label className="cursor-pointer" title="Click to replace receipt">
+                        <img src={receiptPreview} alt="Receipt preview" className="h-16 w-16 object-cover rounded hover:opacity-80 transition-opacity" />
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          onChange={handleFileUpload}
+                        />
+                      </label>
+                    ) : existingReceiptUrl ? (
+                      <label className="cursor-pointer" title="Click to replace receipt">
+                        <img src={existingReceiptUrl} alt="Receipt preview" className="h-16 w-16 object-cover rounded hover:opacity-80 transition-opacity" />
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          onChange={handleFileUpload}
+                        />
+                      </label>
                     ) : (
-                      <div className="h-16 w-16 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                        Receipt
+                      <div className="h-16 w-16 rounded bg-muted flex items-center justify-center">
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       </div>
                     )}
                     <span className="text-sm text-green-600">Receipt uploaded</span>
@@ -420,13 +476,13 @@ export function ExpenseFormModal({
         </form>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleClose} disabled={saving || submitting}>
+          <Button variant="outline" onClick={handleClose} disabled={saving || submitting || uploading}>
             Cancel
           </Button>
           <Button
             variant="secondary"
             onClick={handleSubmit(handleSaveDraft)}
-            disabled={saving || submitting}
+            disabled={saving || submitting || uploading}
           >
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {saving ? "Saving..." : "Save as Draft"}
@@ -434,7 +490,7 @@ export function ExpenseFormModal({
           <Button
             className="bg-indigo-600 hover:bg-indigo-700"
             onClick={handleSubmit(handleSubmitForApproval)}
-            disabled={saving || submitting}
+            disabled={saving || submitting || uploading}
           >
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitting ? "Submitting..." : "Submit for Approval"}

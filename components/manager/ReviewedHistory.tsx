@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CategoryFilter } from "@/components/ui/category-filter";
 
 interface HistoryRow {
   _id: Id<"expenses">;
@@ -50,7 +51,7 @@ export function ReviewedHistory() {
   const categories = useQuery(api.categories.listCategories);
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [nameSearch, setNameSearch] = useState("");
   const [amountRange, setAmountRange] = useState<[number, number] | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -63,9 +64,13 @@ export function ReviewedHistory() {
     api.expenses.getReviewedHistory,
     {
       statusFilter: statusFilter === "all" ? undefined : statusFilter,
-      categoryFilter: categoryFilter === "all" ? undefined : categoryFilter as Id<"categories">,
     }
   );
+
+  const hasLoadedOnce = useRef(false);
+  if (reviewed !== undefined) {
+    hasLoadedOnce.current = true;
+  }
 
   const amountBounds = useMemo(() => {
     if (!reviewed || reviewed.length === 0) return { min: 0, max: 5000 };
@@ -86,8 +91,12 @@ export function ReviewedHistory() {
 
   const filteredData = useMemo(() => {
     if (!reviewed) return [];
-    return reviewed.filter((r: { submitterName: string; amount: number; approvedAt?: number; rejectedAt?: number; closedAt?: number; updatedAt: number }) => {
+    return reviewed.filter((r: { submitterName: string; amount: number; categoryId?: string; approvedAt?: number; rejectedAt?: number; closedAt?: number; updatedAt: number }) => {
       if (nameSearch && !r.submitterName.toLowerCase().includes(nameSearch.toLowerCase())) return false;
+      if (selectedCategories.length > 0) {
+        const catName = r.categoryId ? categoryMap[r.categoryId] : undefined;
+        if (!catName || !selectedCategories.includes(catName)) return false;
+      }
       if (amountRange) {
         if (r.amount < amountRange[0] || r.amount > amountRange[1]) return false;
       }
@@ -99,7 +108,7 @@ export function ReviewedHistory() {
       }
       return true;
     });
-  }, [reviewed, nameSearch, amountRange, dateRange]);
+  }, [reviewed, nameSearch, selectedCategories, categoryMap, amountRange, dateRange]);
 
   const columns = useMemo<ColumnDef<HistoryRow>[]>(
     () => [
@@ -155,7 +164,7 @@ export function ReviewedHistory() {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  if (reviewed === undefined) {
+  if (reviewed === undefined && !hasLoadedOnce.current) {
     return (
       <div className="space-y-3 mt-4" role="status" aria-label="Loading reviewed expenses">
         {Array.from({ length: 5 }).map((_, i) => (
@@ -172,7 +181,10 @@ export function ReviewedHistory() {
     );
   }
 
-  if (reviewed.length === 0) {
+  const hasActiveServerFilters = statusFilter !== "all";
+  const isRefetching = reviewed === undefined && hasLoadedOnce.current;
+
+  if (reviewed !== undefined && reviewed.length === 0 && !hasActiveServerFilters) {
     return (
       <div className="py-12 flex flex-col items-center text-center text-muted-foreground">
         <History className="w-8 h-8 mb-3 text-gray-300" />
@@ -210,19 +222,11 @@ export function ReviewedHistory() {
         </Select>
 
         {/* Category */}
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories?.map((cat: { _id: string; name: string }) => (
-              <SelectItem key={cat._id} value={cat._id}>
-                {cat.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <CategoryFilter
+          selectedCategories={selectedCategories}
+          onSelectionChange={setSelectedCategories}
+          categories={categories?.map((c: { name: string }) => c.name) ?? []}
+        />
 
         {/* Amount range slider */}
         <AmountRangeSlider
@@ -238,7 +242,7 @@ export function ReviewedHistory() {
           <DateRangePicker
             value={dateRange}
             onChange={setDateRange}
-            placeholder="Filter by date"
+            placeholder="Filter by decision date"
             className="w-[260px]"
           />
           {dateRange && (
@@ -251,9 +255,27 @@ export function ReviewedHistory() {
             </Button>
           )}
         </div>
+
+        {/* Reset all */}
+        {(statusFilter !== "all" || selectedCategories.length > 0 || nameSearch !== "" || amountRange !== null || !!dateRange) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={() => {
+              setStatusFilter("all");
+              setSelectedCategories([]);
+              setNameSearch("");
+              setAmountRange(null);
+              setDateRange(undefined);
+            }}
+          >
+            Reset filters
+          </Button>
+        )}
       </div>
 
-      <div className="rounded-md border bg-white overflow-x-auto">
+      <div className={`rounded-md border bg-white overflow-x-auto transition-opacity ${isRefetching ? "opacity-50" : ""}`}>
         <table className="w-full" aria-label="Reviewed expenses history">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (

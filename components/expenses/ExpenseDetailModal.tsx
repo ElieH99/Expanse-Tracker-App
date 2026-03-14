@@ -10,7 +10,6 @@ import { formatDistanceToNow } from "date-fns";
 import { toast } from "@/components/ui/toast";
 import { StatusBadge } from "./StatusBadge";
 import { VersionBadge } from "./VersionBadge";
-import { RejectionBanner } from "./RejectionBanner";
 import { StatusTimeline } from "./StatusTimeline";
 import { VersionHistoryPanel } from "./VersionHistoryPanel";
 import { ExpenseFormModal } from "./ExpenseFormModal";
@@ -32,7 +31,6 @@ import {
   AlertDialogAction,
 } from "@/components/expenses/AlertDialog";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
@@ -134,29 +132,22 @@ export function ExpenseDetailModal({
                 </DialogDescription>
               </DialogHeader>
 
-              {status === "Rejected" && expense?.rejectionReason && expense.rejectionComment && (
-                <RejectionBanner
-                  rejectionReason={expense.rejectionReason}
-                  rejectionComment={expense.rejectionComment}
-                />
-              )}
-
-              <div className="space-y-4">
+              <div className="flex flex-col gap-6">
                 <Card className="bg-gray-50 border-gray-100">
-                  <CardContent className="pt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                  <CardContent className="pt-4 grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-xs text-muted-foreground uppercase tracking-wide">Category</span>
-                      <p className="font-medium text-gray-800 mt-0.5">{categoryName}</p>
+                      <p className="text-sm font-medium mt-0.5">{categoryName}</p>
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground uppercase tracking-wide">Amount</span>
-                      <p className="font-medium text-gray-800 mt-0.5">
+                      <p className="text-sm font-medium mt-0.5">
                         {displayVersion?.amount.toFixed(2)} {displayVersion?.currencyCode}
                       </p>
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground uppercase tracking-wide">Expense Date</span>
-                      <p className="font-medium text-gray-800 mt-0.5">
+                      <p className="text-sm font-medium mt-0.5">
                         {displayVersion?.expenseDate
                           ? format(new Date(displayVersion.expenseDate), "dd MMM yyyy")
                           : "—"}
@@ -164,99 +155,120 @@ export function ExpenseDetailModal({
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground uppercase tracking-wide">Created</span>
-                      <p className="font-medium text-gray-800 mt-0.5">
+                      <p className="text-sm font-medium mt-0.5">
                         {expense ? formatDistanceToNow(new Date(expense.createdAt), { addSuffix: true }) : "—"}
                       </p>
                     </div>
-                    {displayVersion?.notes && (
-                      <div className="col-span-2">
-                        <span className="text-xs text-muted-foreground uppercase tracking-wide">Notes</span>
-                        <p className="text-gray-700 mt-0.5">{displayVersion.notes}</p>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
 
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Description</span>
-                  <p className="mt-1">{displayVersion?.description}</p>
+                {displayVersion?.notes && (
+                  <div className="border-t border-border pt-6 text-sm">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wide">Notes</span>
+                    <p className="text-sm mt-1">{displayVersion.notes}</p>
+                  </div>
+                )}
+
+                <div className="border-t border-border pt-6 text-sm">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Description</span>
+                  <p className="text-sm mt-1">{displayVersion?.description}</p>
                 </div>
 
                 {displayVersion?.receiptStorageId && (
-                  <ReceiptPreview
-                    storageId={displayVersion.receiptStorageId}
-                    expenseId={expenseId}
-                  />
+                  <div className="border-t border-border pt-6">
+                    <ReceiptPreview
+                      storageId={displayVersion.receiptStorageId}
+                      expenseId={expenseId}
+                    />
+                  </div>
+                )}
+
+                {(status === "Rejected" || status === "Closed") && (
+                  <div className={`rounded-xl border p-4 text-sm ${status === "Rejected" ? "border-orange-200 bg-orange-50" : "border-red-200 bg-red-50"}`}>
+                    <p className={`text-xs uppercase tracking-wide font-medium mb-1 ${status === "Rejected" ? "text-orange-700" : "text-red-700"}`}>
+                      {status === "Rejected" ? "Rejected" : "Closed"}
+                      {status === "Rejected" && expense?.rejectionReason ? `: ${expense.rejectionReason}` : ""}
+                      {status === "Closed" && expense?.closeReason ? `: ${expense.closeReason}` : ""}
+                    </p>
+                    {status === "Rejected" && expense?.rejectionComment && (
+                      <p className="text-sm text-orange-900">{expense.rejectionComment}</p>
+                    )}
+                    {status === "Closed" && expense?.closeComment && (
+                      <p className="text-sm text-red-900">{expense.closeComment}</p>
+                    )}
+                    {status === "Rejected" && expense?.rejectedByName && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        By {expense.rejectedByName.firstName} {expense.rejectedByName.lastName}
+                        {expense.rejectedAt && ` · ${format(new Date(expense.rejectedAt), "dd MMM yyyy, HH:mm")}`}
+                      </p>
+                    )}
+                    {status === "Closed" && expense?.closedByName && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        By {expense.closedByName.firstName} {expense.closedByName.lastName}
+                        {expense.closedAt && ` · ${format(new Date(expense.closedAt), "dd MMM yyyy, HH:mm")}`}
+                      </p>
+                    )}
+                  </div>
                 )}
 
                 {status === "Approved" && expense?.approvalNote && (
-                  <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm">
-                    <p className="font-medium text-green-800">Approval Note</p>
-                    <p className="text-green-700 mt-1">{expense.approvalNote}</p>
+                  <div className="rounded-xl border border-border p-4 text-sm">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Approval Note</p>
+                    <p className="text-sm">{expense.approvalNote}</p>
                     {expense.approvedByName && (
-                      <p className="text-green-600 text-xs mt-1">
+                      <p className="text-xs text-muted-foreground mt-2">
                         By {expense.approvedByName.firstName} {expense.approvedByName.lastName}
-                        {expense.approvedAt && ` on ${format(new Date(expense.approvedAt), "dd MMM yyyy, HH:mm")}`}
+                        {expense.approvedAt && ` · ${format(new Date(expense.approvedAt), "dd MMM yyyy, HH:mm")}`}
                       </p>
                     )}
                   </div>
                 )}
 
-                {status === "Closed" && expense?.closeComment && (
-                  <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm">
-                    <p className="font-medium text-red-800">Closed: {expense.closeReason}</p>
-                    <p className="text-red-700 mt-1">{expense.closeComment}</p>
-                    {expense.closedByName && (
-                      <p className="text-red-600 text-xs mt-1">
-                        By {expense.closedByName.firstName} {expense.closedByName.lastName}
-                        {expense.closedAt && ` on ${format(new Date(expense.closedAt), "dd MMM yyyy, HH:mm")}`}
-                      </p>
+                {(status === "Draft" || status === "Submitted" || status === "Rejected") && (
+                  <div className="flex gap-2 border-t border-border pt-6">
+                    {status === "Draft" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setEditMode("edit");
+                            setEditModalOpen(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button onClick={handleSubmitDraft}>Submit for Approval</Button>
+                      </>
                     )}
-                  </div>
-                )}
-
-                <Separator />
-
-                <div className="flex gap-2">
-                  {status === "Draft" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setEditMode("edit");
-                          setEditModalOpen(true);
-                        }}
-                      >
-                        Edit
+                    {status === "Submitted" && (
+                      <Button variant="destructive" onClick={() => setWithdrawConfirm(true)}>
+                        Withdraw
                       </Button>
-                      <Button onClick={handleSubmitDraft}>Submit for Approval</Button>
-                    </>
-                  )}
-                  {status === "Submitted" && (
-                    <Button variant="destructive" onClick={() => setWithdrawConfirm(true)}>
-                      Withdraw
-                    </Button>
-                  )}
-                  {status === "Rejected" && (
-                    <Button onClick={handleEditRejected}>Edit & Resubmit</Button>
-                  )}
-                </div>
+                    )}
+                    {status === "Rejected" && (
+                      <Button onClick={handleEditRejected}>Edit & Resubmit</Button>
+                    )}
+                  </div>
+                )}
 
-                <Separator />
-
-                {detail.versions.length > 0 && (
-                  <VersionHistoryPanel
-                    /* eslint-disable @typescript-eslint/no-explicit-any */
-                    versions={(detail.versions as any[]).map((v: any) => ({
-                      ...v,
-                      categoryName: detail.categoriesMap[v.categoryId] ?? "Unknown",
-                    }))}
-                    currentStatus={expense?.status ?? ""}
-                  />
+                {detail.versions.length > 1 && (
+                  <div className="border-t border-border pt-6">
+                    <VersionHistoryPanel
+                      /* eslint-disable @typescript-eslint/no-explicit-any */
+                      versions={(detail.versions as any[]).map((v: any) => ({
+                        ...v,
+                        categoryName: detail.categoriesMap[v.categoryId] ?? "Unknown",
+                      }))}
+                      currentStatus={expense?.status ?? ""}
+                      history={detail.history}
+                    />
+                  </div>
                 )}
 
                 {detail.history.length > 0 && (
-                  <StatusTimeline history={detail.history} />
+                  <div className="border-t border-border pt-6">
+                    <StatusTimeline history={detail.history} />
+                  </div>
                 )}
               </div>
             </>
@@ -323,21 +335,18 @@ function ReceiptPreview({
     expenseId,
   });
 
-  if (!url) {
-    return (
-      <div className="text-sm">
-        <span className="text-muted-foreground">Receipt</span>
-        <Skeleton className="mt-1 h-24 w-24 rounded" />
-      </div>
-    );
-  }
-
   return (
     <div className="text-sm">
-      <span className="text-muted-foreground">Receipt</span>
-      <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-1">
-        <img src={url} alt="Receipt" className="max-h-48 rounded border cursor-pointer hover:opacity-80" />
-      </a>
+      <span className="text-xs text-muted-foreground uppercase tracking-wide">Receipt</span>
+      <div className="mt-1 h-48 w-full rounded border bg-muted flex items-center justify-center overflow-hidden">
+        {!url ? (
+          <Skeleton className="h-full w-full" />
+        ) : (
+          <a href={url} target="_blank" rel="noopener noreferrer" className="h-full w-full flex items-center justify-center">
+            <img src={url} alt="Receipt" className="max-h-full max-w-full object-contain cursor-pointer hover:opacity-80" />
+          </a>
+        )}
+      </div>
     </div>
   );
 }

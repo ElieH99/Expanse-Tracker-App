@@ -22,7 +22,7 @@ This is an internal tool — not a public SaaS product. Clarity, correctness, an
 | Auth | **Convex Auth** (email/password) | Session management, token signing |
 | Frontend | **Next.js 16 (App Router)** | React, file-based routing |
 | Styling | **Tailwind CSS** | Utility-first; no custom CSS files unless absolutely necessary |
-| Components | **shadcn/ui** | Built on Radix UI — modals, dialogs, badges, dropdowns, form primitives |
+| Components | **shadcn/ui** | Built on Radix UI — modals, dialogs, badges, dropdowns, form primitives. **shadcn components are the primary building block throughout the UI.** Custom one-off UI elements must be replaced with the nearest shadcn primitive before introducing new markup. |
 | Tables | **TanStack Table v8** | All list/table views — sorting, filtering, pagination |
 | Forms | **React Hook Form + Zod** | Zod schemas shared between client and Convex validators |
 | Dates | **date-fns** | UTC storage → local display; relative time in lists, absolute in timelines |
@@ -185,6 +185,7 @@ Seeded data. 7 categories (see Section 7).
 |---|---|---|---|
 | Employee | Miles Morales | `miles@employee.dev` | `MilesEmployee@2026!` |
 | Manager | Jack Black | `jack@manager.dev` | `JackManager@2026!` |
+| Manager | Mike Tyson | `mike@manager.dev` | `MikeManager@2026!` |
 
 Seeded via `convex/seed.ts`. Run with `npx convex run seed`.
 
@@ -268,22 +269,35 @@ NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
 
 ## 11. Agent Roster & Responsibilities
 
-| Agent | File | Primary Responsibility |
-|---|---|---|
-| Architect | `AGENT_1_ARCHITECT.md` | Schema, auth config, Convex setup, project scaffolding |
-| Backend | `AGENT_2_BACKEND.md` | Mutations, queries, business logic, validation, error handling |
-| Frontend | `AGENT_3_FRONTEND.md` | All UI — pages, modals, tables, forms, dashboards |
-| QA | `AGENT_4_QA.md` | Automated tests — unit, integration, E2E (Playwright) |
-| Security | `AGENT_5_SECURITY.md` | Auth rules, server-side enforcement, input validation, audit trail |
-| Design | `AGENT_6_DESIGN.md` | UI/UX patterns, accessibility, responsive layout, component design |
+| Agent | File | Primary Responsibility | Status |
+|---|---|---|---|
+| Architect | `AGENT_1_ARCHITECT.md` | Schema, auth config, Convex setup, project scaffolding | ✅ Complete |
+| Backend | `AGENT_2_BACKEND.md` | Mutations, queries, business logic, validation, error handling | ✅ Complete |
+| Frontend | `AGENT_3_FRONTEND.md` | All UI — pages, modals, tables, forms, dashboards | ✅ Complete |
+| QA | `AGENT_4_QA.md` | Automated tests — unit, integration, E2E (Playwright) | ⬜ Not yet run |
+| Security | `AGENT_5_SECURITY.md` | Auth rules, server-side enforcement, input validation, audit trail | ✅ Complete |
+| Design | `AGENT_6_DESIGN.md` | UI/UX patterns, accessibility, responsive layout, component design | ✅ Complete (×2) |
 
 **Agent execution order:** Architect → Backend → Security → Frontend → Design → QA
+
+> **Note:** Design ran twice. The second pass standardised shadcn/ui usage across all components — custom-styled elements were replaced with shadcn primitives throughout the codebase.
 
 Each agent must:
 1. Read this `CLAUDE.md` in full before acting
 2. Not introduce libraries outside the approved stack without flagging
 3. Not duplicate validation logic — reference `lib/validators.ts`
 4. Not make assumptions about business rules — if uncertain, reference the FR/NFR documents
+
+---
+
+## 14. Current Status
+
+**Build phase:** Fixing issues
+**Last completed phase:** Design (pass 2 — shadcn standardisation)
+**Agents completed:** Architect, Backend, Security, Frontend, Design
+**QA:** Not yet run
+**Seeded accounts:** Confirmed correct (see Section 7)
+**Design note:** All UI components use shadcn/ui primitives as the default. Do not introduce custom-styled elements where a shadcn component exists.
 
 ---
 

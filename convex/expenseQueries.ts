@@ -309,9 +309,22 @@ export const getManagerStats = query({
       .query("expenses")
       .withIndex("by_status", (q: any) => q.eq("status", "Approved"))
       .collect();
-    const approvedThisMonth = approved.filter(
+    const approvedThisMonthExpenses = approved.filter(
       (e) => e.approvedAt && e.approvedAt >= monthStart
-    ).length;
+    );
+    const approvedThisMonth = approvedThisMonthExpenses.length;
+
+    // Compute total approved budget this month by summing version amounts
+    let approvedBudgetThisMonth = 0;
+    for (const expense of approvedThisMonthExpenses) {
+      const version = await ctx.db
+        .query("expenseVersions")
+        .withIndex("by_expenseId_versionNumber", (q: any) =>
+          q.eq("expenseId", expense._id).eq("versionNumber", expense.currentVersion)
+        )
+        .unique();
+      approvedBudgetThisMonth += version?.amount ?? 0;
+    }
 
     const rejected = await ctx.db
       .query("expenses")
@@ -321,13 +334,21 @@ export const getManagerStats = query({
       (e) => e.rejectedAt && e.rejectedAt >= monthStart
     ).length;
 
-    const allExpenses = await ctx.db.query("expenses").collect();
-    const totalUnderManagement = allExpenses.length;
+    const closed = await ctx.db
+      .query("expenses")
+      .withIndex("by_status", (q: any) => q.eq("status", "Closed"))
+      .collect();
+    const totalUnderManagement =
+      submitted.length + underReview.length + approved.length + rejected.length + closed.length;
 
     return {
       pending,
       approvedThisMonth,
+      approvedBudgetThisMonth,
       rejectedThisMonth,
+      closedCount: closed.length,
+      submittedCount: submitted.length,
+      underReviewCount: underReview.length,
       totalUnderManagement,
     };
   },

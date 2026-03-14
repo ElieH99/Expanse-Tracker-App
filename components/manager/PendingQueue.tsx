@@ -8,6 +8,9 @@ import {
   flexRender,
   type ColumnDef,
   type SortingState,
+  type Row,
+  type HeaderGroup,
+  type Cell,
 } from "@tanstack/react-table";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -20,8 +23,9 @@ import { AmountRangeSlider } from "@/components/ui/amount-range-slider";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { type DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { CategoryFilter } from "@/components/ui/category-filter";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import {
   HoverCard,
   HoverCardContent,
@@ -50,6 +54,8 @@ export function PendingQueue() {
 
   const [amountRange, setAmountRange] = useState<[number, number] | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [nameSearch, setNameSearch] = useState("");
 
   const amountBounds = useMemo(() => {
     if (!pending || pending.length === 0) return { min: 0, max: 5000 };
@@ -71,6 +77,11 @@ export function PendingQueue() {
   const filteredData = useMemo(() => {
     if (!pending) return [];
     return pending.filter((e) => {
+      if (nameSearch && !e.submitterName.toLowerCase().includes(nameSearch.toLowerCase())) return false;
+      if (selectedCategories.length > 0) {
+        const catName = e.categoryId ? categoryMap[e.categoryId] : undefined;
+        if (!catName || !selectedCategories.includes(catName)) return false;
+      }
       if (amountRange) {
         if (e.amount < amountRange[0] || e.amount > amountRange[1]) return false;
       }
@@ -81,8 +92,9 @@ export function PendingQueue() {
       }
       return true;
     });
-  }, [pending, amountRange, dateRange]);
+  }, [pending, nameSearch, selectedCategories, categoryMap, amountRange, dateRange]);
 
+  // Actions column uses row.index (position in the sorted model) — no circular dep with table/sortedRows
   const columns = useMemo<ColumnDef<PendingRow>[]>(
     () => [
       {
@@ -154,6 +166,25 @@ export function PendingQueue() {
           <StatusBadge status={row.original.status as ExpenseStatus} />
         ),
       },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }: { row: Row<PendingRow> }) => (
+          <div
+            className="flex items-center gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2.5 text-xs border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800"
+              onClick={() => setReviewIndex(row.index)}
+            >
+              Review
+            </Button>
+          </div>
+        ),
+      },
     ],
     [categoryMap]
   );
@@ -204,6 +235,21 @@ export function PendingQueue() {
     <>
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3 mt-4 mb-4">
+        {/* Name search */}
+        <Input
+          placeholder="Search by employee name..."
+          value={nameSearch}
+          onChange={(e) => setNameSearch(e.target.value)}
+          className="w-56"
+        />
+
+        {/* Category */}
+        <CategoryFilter
+          selectedCategories={selectedCategories}
+          onSelectionChange={setSelectedCategories}
+          categories={categories?.map((c: { name: string }) => c.name) ?? []}
+        />
+
         {/* Amount range slider */}
         <AmountRangeSlider
           min={amountBounds.min}
@@ -218,7 +264,7 @@ export function PendingQueue() {
           <DateRangePicker
             value={dateRange}
             onChange={setDateRange}
-            placeholder="Filter by date"
+            placeholder="Filter by submitted date"
             className="w-[260px]"
           />
           {dateRange && (
@@ -231,12 +277,29 @@ export function PendingQueue() {
             </Button>
           )}
         </div>
+
+        {/* Reset all */}
+        {(amountRange !== null || !!dateRange || selectedCategories.length > 0 || nameSearch !== "") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={() => {
+              setAmountRange(null);
+              setDateRange(undefined);
+              setSelectedCategories([]);
+              setNameSearch("");
+            }}
+          >
+            Reset filters
+          </Button>
+        )}
       </div>
 
       <div className="rounded-md border bg-white mt-0 overflow-x-auto">
         <table className="w-full" aria-label="Pending expenses for review">
           <thead>
-            {table.getHeaderGroups().map((headerGroup) => (
+            {table.getHeaderGroups().map((headerGroup: HeaderGroup<PendingRow>) => (
               <tr key={headerGroup.id} className="border-b bg-muted/50">
                 {headerGroup.headers.map((header) => (
                   <th
@@ -262,7 +325,7 @@ export function PendingQueue() {
                 </td>
               </tr>
             ) : (
-              sortedRows.map((row, idx) => (
+              sortedRows.map((row: Row<PendingRow>, idx: number) => (
                 <tr
                   key={row.id}
                   className={`border-b hover:bg-muted/30 cursor-pointer transition-colors ${
@@ -270,7 +333,7 @@ export function PendingQueue() {
                   }`}
                   onClick={() => setReviewIndex(idx)}
                 >
-                  {row.getVisibleCells().map((cell) => (
+                  {row.getVisibleCells().map((cell: Cell<PendingRow, unknown>) => (
                     <td key={cell.id} className="px-4 py-3 text-sm">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
@@ -287,7 +350,7 @@ export function PendingQueue() {
           open={reviewIndex !== null}
           onClose={() => setReviewIndex(null)}
           expenseId={sortedRows[reviewIndex]?.original._id ?? null}
-          queue={sortedRows.map((r) => r.original._id)}
+          queue={sortedRows.map((r: Row<PendingRow>) => r.original._id)}
           currentIndex={reviewIndex}
           onNavigate={setReviewIndex}
         />

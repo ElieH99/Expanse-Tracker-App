@@ -19,12 +19,12 @@ export default function DashboardLayout({
   const { signOut } = useAuthActions();
   const router = useRouter();
 
-  // Redirect unauthenticated users
+  // Redirect unauthenticated users (skip if already signing out to avoid double redirect)
   useEffect(() => {
-    if (user === null) {
+    if (user === null && !signingOut) {
       router.replace("/login");
     }
-  }, [user, router]);
+  }, [user, router, signingOut]);
 
   // Loading state — also shown during sign-out to unmount children and stop their queries
   if (signingOut || user === undefined || user === null) {
