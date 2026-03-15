@@ -128,6 +128,12 @@ The seed script is idempotent — safe to run multiple times.
 - **Frontend-only changes:** Push to your main branch — Vercel redeploys automatically.
 - **Schema changes:** Always deploy Convex first, then Vercel, to avoid function/schema mismatches.
 
+## Sample Receipts
+
+The [`docs/sample-receipts/`](docs/sample-receipts/) folder contains ready-to-use receipt images for manually testing the expense submission flow. Use any of these files when prompted to upload a receipt in the app.
+
+Accepted formats: JPEG, PNG, WEBP — max 5 MB per file.
+
 ## Testing
 
 ```bash
@@ -148,6 +154,7 @@ E2E tests expect the app to be running at `http://localhost:3000` with the seed 
 | Doc | Audience |
 |---|---|
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Employees & managers — workflows, status meanings, FAQ |
+| [docs/sample-receipts/](docs/sample-receipts/) | Sample receipt images for manual testing |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Engineers — system design, auth flow, data model, state machine |
 | [docs/API_REFERENCE.md](docs/API_REFERENCE.md) | Engineers — all Convex mutations and queries |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Contributors — conventions, patterns, PR checklist |

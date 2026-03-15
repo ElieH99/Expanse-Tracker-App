@@ -23,4 +23,9 @@ jobs:
           node-version: 18
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test
+      - name: Run e2e tests
+        if: ${{ env.PLAYWRIGHT_BASE_URL != '' }}
+        run: npx playwright test
+      - name: Skip e2e tests (STAGING_URL not set)
+        if: ${{ env.PLAYWRIGHT_BASE_URL == '' }}
+        run: echo "Skipping e2e tests — STAGING_URL secret is not configured."
