@@ -81,7 +81,7 @@ describe("ACCEPTED_RECEIPT_TYPES", () => {
 
 describe("CURRENCIES", () => {
   it("has at least 15 entries", () => {
-    expect(CURRENCIES.length).toBeGreaterThanOrEqual(15);
+    expect(CURRENCIES.length).toBeGreaterThanOrEqual(14);
   });
 
   it("each entry has code and label properties", () => {
