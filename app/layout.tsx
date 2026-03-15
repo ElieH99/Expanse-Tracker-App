@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Internal Expense Tracker",
+  title: "Budgy",
   description: "Submit and manage expense claims for approval",
 };
 

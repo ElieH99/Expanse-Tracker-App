@@ -84,8 +84,11 @@ export default function DashboardLayout({
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <Receipt className="h-6 w-6 text-primary" />
-            <span className="text-lg font-semibold">Expense Tracker</span>
+            <Receipt className="h-8 w-8 text-primary" />
+            <div className="flex flex-col leading-tight">
+              <span className="text-xl font-bold">Budgy</span>
+              <span className="text-xs text-muted-foreground">Internal Expense Tracker</span>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-xs rounded-full px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 capitalize">

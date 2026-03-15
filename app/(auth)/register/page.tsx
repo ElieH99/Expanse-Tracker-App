@@ -73,7 +73,7 @@ export default function RegisterPage() {
             <div className="flex justify-center mb-4">
               <div className="flex items-center gap-2">
                 <Receipt className="h-6 w-6 text-primary" />
-                <span className="text-sm font-medium text-foreground">Expense Tracker</span>
+                <span className="text-xl font-bold text-foreground">Budgy</span>
               </div>
             </div>
 
@@ -82,7 +82,7 @@ export default function RegisterPage() {
             {/* Heading */}
             <div className="mb-5">
               <h1 className="text-lg font-medium">Create account</h1>
-              <p className="text-sm text-muted-foreground">Internal expense tracker</p>
+              <p className="text-sm text-muted-foreground">Internal Expense Tracker</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
